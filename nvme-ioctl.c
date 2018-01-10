@@ -405,8 +405,7 @@ int nvme_fw_log(int fd, struct nvme_firmware_log_page *fw_log)
 	return nvme_get_log(fd, NVME_NSID_ALL, NVME_LOG_FW_SLOT, sizeof(*fw_log), fw_log);
 }
 
-int nvme_error_log(int fd, __u32 nsid, int entries,
-		   struct nvme_error_log_page *err_log)
+int nvme_error_log(int fd, int entries, struct nvme_error_log_page *err_log)
 {
 	return nvme_get_log(fd, 0, NVME_LOG_ERROR, entries * sizeof(*err_log), err_log);
 }
