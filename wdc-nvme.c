@@ -872,7 +872,9 @@ static int wdc_smart_log_add(int argc, char **argv, struct command *command,
 	}
 	memset(data, 0, sizeof (__u8) * WDC_ADD_LOG_BUF_LEN);
 
-	ret = nvme_get_log(fd, 0x01, WDC_NVME_ADD_LOG_OPCODE, WDC_ADD_LOG_BUF_LEN, data);
+	ret = nvme_get_log(fd, 0x01, WDC_NVME_ADD_LOG_OPCODE,
+			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
+			   WDC_ADD_LOG_BUF_LEN, data);
 	fprintf(stderr, "NVMe Status:%s(%x)\n", nvme_status_to_string(ret), ret);
 	if (ret == 0) {
 		l = (struct wdc_log_page_header*)data;
