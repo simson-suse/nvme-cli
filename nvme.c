@@ -244,7 +244,8 @@ static int get_effects_log(int argc, char **argv, struct command *cmd, struct pl
 	if (fd < 0)
 		return fd;
 
-	err = nvme_get_log(fd, NVME_NSID_ALL, 5, 4096, &effects);
+	err = nvme_get_log(fd, NVME_NSID_ALL, 5,
+			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO, 4096, &effects);
 	if (!err)
 		show_effects_log(&effects);
 	else if (err > 0)
@@ -396,6 +397,8 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 	const char *log_id = "identifier of log to retrieve";
 	const char *log_len = "how many bytes to retrieve";
 	const char *aen = "result of the aen, use to override log id";
+	const char *lsp = "log specific field";
+	const char *lpo = "log page offset specifies the location within a log page from where to start returning data";
 	const char *raw_binary = "output in raw format";
 	int err, fd;
 
@@ -404,6 +407,8 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		__u32 log_id;
 		__u32 log_len;
 		__u32 aen;
+		__u64 lpo;
+		__u8  lsp;
 		int   raw_binary;
 	};
 
@@ -411,6 +416,8 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		.namespace_id = NVME_NSID_ALL,
 		.log_id       = 0xffffffff,
 		.log_len      = 0,
+		.lpo          = NVME_NO_LOG_LPO,
+		.lsp          = NVME_NO_LOG_LSP,
 	};
 
 	const struct argconfig_commandline_options command_line_options[] = {
@@ -419,6 +426,8 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		{"log-len",      'l', "NUM", CFG_POSITIVE, &cfg.log_len,      required_argument, log_len},
 		{"aen",          'a', "NUM", CFG_POSITIVE, &cfg.aen,          required_argument, aen},
 		{"raw-binary",   'b', "",    CFG_NONE,     &cfg.raw_binary,   no_argument,       raw_binary},
+		{"lpo",          'o', "NUM", CFG_LONG,     &cfg.lpo,          required_argument, lpo},
+		{"lsp",          's', "NUM", CFG_BYTE,     &cfg.lsp,          required_argument, lsp},
 		{NULL}
 	};
 
@@ -450,7 +459,9 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 			return EINVAL;
 		}
 
-		err = nvme_get_log(fd, cfg.namespace_id, cfg.log_id, cfg.log_len, log);
+		err = nvme_get_log(fd, cfg.namespace_id, cfg.log_id,
+				   cfg.lsp, cfg.lpo,
+				   cfg.log_len, log);
 		if (!err) {
 			if (!cfg.raw_binary) {
 				printf("Device:%s log-id:%d namespace-id:%#x\n",
@@ -515,7 +526,9 @@ static int sanitize_log(int argc, char **argv, struct command *command, struct p
 	if (fd < 0)
 		return fd;
 
-	ret = nvme_get_log(fd, 0x01, NVME_LOG_SANITIZE, NVME_SANITIZE_LOG_DATA_LEN, output);
+	ret = nvme_get_log(fd, 0x01, NVME_LOG_SANITIZE,
+			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
+			   NVME_SANITIZE_LOG_DATA_LEN, output);
 	fprintf(stderr, "NVMe Status:%s(%x)\n", nvme_status_to_string(ret), ret);
 	if (ret != 0)
 		return ret;
