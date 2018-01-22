@@ -253,9 +253,7 @@ static int get_additional_smart_log(int argc, char **argv, struct command *cmd, 
 
 	fd = parse_and_open(argc, argv, desc, command_line_options, &cfg, sizeof(cfg));
 
-	err = nvme_get_log(fd, cfg.namespace_id, 0xca,
-			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
-			   sizeof(smart_log), &smart_log);
+	err = nvme_get_log(fd, cfg.namespace_id, 0xca, sizeof(smart_log), &smart_log);
 	if (!err) {
 		if (cfg.json)
 			show_intel_smart_log_jsn(&smart_log, cfg.namespace_id, devicename);
@@ -291,9 +289,7 @@ static int get_market_log(int argc, char **argv, struct command *cmd, struct plu
 
 	fd = parse_and_open(argc, argv, desc, command_line_options, &cfg, sizeof(cfg));
 
-	err = nvme_get_log(fd, NVME_NSID_ALL, 0xdd,
-			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
-			   sizeof(log), log);
+	err = nvme_get_log(fd, NVME_NSID_ALL, 0xdd, sizeof(log), log);
 	if (!err) {
 		if (!cfg.raw_binary)
 			printf("Intel Marketing Name Log:\n%s\n", log);
@@ -353,9 +349,7 @@ static int get_temp_stats_log(int argc, char **argv, struct command *cmd, struct
 
 	fd = parse_and_open(argc, argv, desc, command_line_options, &cfg, sizeof(cfg));
 
-	err = nvme_get_log(fd, NVME_NSID_ALL, 0xc5,
-			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
-			   sizeof(stats), &stats);
+	err = nvme_get_log(fd, NVME_NSID_ALL, 0xc5, sizeof(stats), &stats);
 	if (!err) {
 		if (!cfg.raw_binary)
 			show_temp_stats(&stats);
@@ -421,9 +415,7 @@ static int get_lat_stats_log(int argc, char **argv, struct command *cmd, struct 
 
 	fd = parse_and_open(argc, argv, desc, command_line_options, &cfg, sizeof(cfg));
 
-	err = nvme_get_log(fd, NVME_NSID_ALL, cfg.write ? 0xc2 : 0xc1,
-			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
-			   sizeof(stats), &stats);
+	err = nvme_get_log(fd, NVME_NSID_ALL, cfg.write ? 0xc2 : 0xc1, sizeof(stats), &stats);
 	if (!err) {
 		if (!cfg.raw_binary)
 			show_lat_stats(&stats, cfg.write);

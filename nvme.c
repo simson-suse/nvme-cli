@@ -244,8 +244,7 @@ static int get_effects_log(int argc, char **argv, struct command *cmd, struct pl
 	if (fd < 0)
 		return fd;
 
-	err = nvme_get_log(fd, NVME_NSID_ALL, 5,
-			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO, 4096, &effects);
+	err = nvme_get_log(fd, NVME_NSID_ALL, 5, 4096, &effects);
 	if (!err)
 		show_effects_log(&effects);
 	else if (err > 0)
@@ -459,9 +458,9 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 			return EINVAL;
 		}
 
-		err = nvme_get_log(fd, cfg.namespace_id, cfg.log_id,
-				   cfg.lsp, cfg.lpo,
-				   cfg.log_len, log);
+		err = nvme_get_log13(fd, cfg.namespace_id, cfg.log_id,
+				     cfg.lsp, cfg.lpo,
+				     cfg.log_len, log);
 		if (!err) {
 			if (!cfg.raw_binary) {
 				printf("Device:%s log-id:%d namespace-id:%#x\n",
@@ -527,7 +526,6 @@ static int sanitize_log(int argc, char **argv, struct command *command, struct p
 		return fd;
 
 	ret = nvme_get_log(fd, 0x01, NVME_LOG_SANITIZE,
-			   NVME_NO_LOG_LSP, NVME_NO_LOG_LPO,
 			   NVME_SANITIZE_LOG_DATA_LEN, output);
 	fprintf(stderr, "NVMe Status:%s(%x)\n", nvme_status_to_string(ret), ret);
 	if (ret != 0)
