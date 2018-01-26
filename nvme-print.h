@@ -29,6 +29,8 @@ void show_fw_log(struct nvme_firmware_log_page *fw_log, const char *devname);
 void show_effects_log(struct nvme_effects_log_page *effects);
 void show_ctrl_registers(void *bar, unsigned int mode, bool fabrics);
 void show_nvme_id_ns_descs(void *data);
+void show_list_items(struct list_item *list_items, unsigned len);
+void show_nvme_subsystem_list(struct subsys_list_item *slist, int n);
 
 void nvme_feature_show_fields(__u32 fid, unsigned int result, unsigned char *buf);
 void nvme_directive_show_fields(__u8 dtype, __u8 doper, unsigned int result, unsigned char *buf);
