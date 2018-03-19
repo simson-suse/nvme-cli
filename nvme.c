@@ -409,7 +409,7 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 
 	struct config cfg = {
 		.namespace_id = NVME_NSID_ALL,
-		.log_id       = 0,
+		.log_id       = 0xffffffff,
 		.log_len      = 0,
 	};
 
@@ -431,9 +431,16 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		cfg.log_id = (cfg.aen >> 16) & 0xff;
 	}
 
+	if (cfg.log_id > 0xff) {
+		fprintf(stderr, "Invalid log identifier: %d. Valid range: 0-255\n", cfg.log_id);
+		err = EINVAL;
+		goto close_fd;
+	}
+
 	if (!cfg.log_len) {
 		fprintf(stderr, "non-zero log-len is required param\n");
-		return EINVAL;
+		err = EINVAL;
+		goto close_fd;
 	} else {
 		unsigned char *log;
 
@@ -457,9 +464,14 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 						nvme_status_to_string(err), err);
 		else
 			perror("log page");
+		close(fd);
 		free(log);
 		return err;
 	}
+
+close_fd:
+	close(fd);
+	return err;
 }
 
 static const char * sanitize_mon_status_to_string(__u16 status)
