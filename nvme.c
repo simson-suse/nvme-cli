@@ -363,6 +363,7 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 	const char *log_len = "how many bytes to retrieve";
 	const char *lsp = "log specific field";
 	const char *lpo = "log page offset specifies the location within a log page from where to start returning data";
+	const char *rae = "retain an asynchronous event";
 	const char *raw_binary = "output in raw format";
 	int err, fd;
 
@@ -372,6 +373,7 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		__u32 log_len;
 		__u64 lpo;
 		__u8  lsp;
+		int   rae;
 		int   raw_binary;
 	};
 
@@ -381,6 +383,7 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		.log_len      = 0,
 		.lpo          = NVME_NO_LOG_LPO,
 		.lsp          = NVME_NO_LOG_LSP,
+		.rae          = 0,
 	};
 
 	const struct argconfig_commandline_options command_line_options[] = {
@@ -390,6 +393,7 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		{"raw-binary",   'b', "",    CFG_NONE,     &cfg.raw_binary,   no_argument,       raw_binary},
 		{"lpo",          'o', "NUM", CFG_LONG,     &cfg.lpo,          required_argument, lpo},
 		{"lsp",          's', "NUM", CFG_BYTE,     &cfg.lsp,          required_argument, lsp},
+		{"rae",          'r', "",    CFG_NONE,     &cfg.rae,          no_argument,       rae},
 		{NULL}
 	};
 
@@ -410,7 +414,7 @@ static int get_log(int argc, char **argv, struct command *cmd, struct plugin *pl
 		}
 
 		err = nvme_get_log13(fd, cfg.namespace_id, cfg.log_id,
-				     cfg.lsp, cfg.lpo,
+				     cfg.lsp, cfg.lpo, 0, cfg.rae,
 				     cfg.log_len, log);
 		if (!err) {
 			if (!cfg.raw_binary) {
@@ -1611,7 +1615,7 @@ static int set_feature(int argc, char **argv, struct command *cmd, struct plugin
 		{"value",        'v', "NUM",  CFG_POSITIVE, &cfg.value,        required_argument, value},
 		{"data-len",     'l', "NUM",  CFG_POSITIVE, &cfg.data_len,     required_argument, data_len},
 		{"data",         'd', "FILE", CFG_STRING,   &cfg.file,         required_argument, data},
-		{"save",         's', "",     CFG_NONE,     &cfg.save,         no_argument, save},
+		{"save",         's', "",     CFG_NONE,     &cfg.save,         no_argument,       save},
 		{NULL}
 	};
 
