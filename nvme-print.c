@@ -7,6 +7,23 @@
 #include "json.h"
 #include "nvme-models.h"
 
+static const char *nvme_ana_state_to_string(enum nvme_ana_state state)
+{
+	switch (state) {
+	case NVME_ANA_OPTIMIZED:
+		return "optimized";
+	case NVME_ANA_NONOPTIMIZED:
+		return "non-optimized";
+	case NVME_ANA_INACCESSIBLE:
+		return "inaccessible";
+	case NVME_ANA_PERSISTENT_LOSS:
+		return "persistent-loss";
+	case NVME_ANA_CHANGE:
+		return "change";
+	}
+	return "invalid state";
+}
+
 static long double int128_to_double(__u8 *data)
 {
 	int i;
@@ -77,12 +94,15 @@ static void format(char *formatter, size_t fmt_sz, char *tofmt, size_t tofmtsz)
 
 static void show_nvme_id_ctrl_cmic(__u8 cmic)
 {
-	__u8 rsvd = (cmic & 0xF8) >> 3;
+	__u8 rsvd = (cmic & 0xF0) >> 4;
+	__u8 ana = (cmic & 0x8) >> 3;
 	__u8 sriov = (cmic & 0x4) >> 2;
 	__u8 mctl = (cmic & 0x2) >> 1;
 	__u8 mp = cmic & 0x1;
+
 	if (rsvd)
-		printf("  [7:3] : %#x\tReserved\n", rsvd);
+		printf("  [7:4] : %#x\tReserved\n", rsvd);
+	printf("  [3:3] : %#x\tANA %ssupported\n", ana, ana ? "" : "not ");
 	printf("  [2:2] : %#x\t%s\n", sriov, sriov ? "SR-IOV" : "PCI");
 	printf("  [1:1] : %#x\t%s Controller\n",
 		mctl, mctl ? "Multi" : "Single");
@@ -258,6 +278,37 @@ static void show_nvme_id_ctrl_sanicap(__le32 ctrl_sanicap)
 		ber, ber ? "" : "Not ");
 	printf("  [0:0] : %#x\tCrypto Erase Sanitize Operation %sSupported\n",
 		cer, cer ? "" : "Not ");
+	printf("\n");
+}
+
+
+static void show_nvme_id_ctrl_anacap(__u8 anacap)
+{
+	__u8 nz = (anacap & 0x80) >> 7;
+	__u8 grpid_change = (anacap & 0x40) >> 6;
+	__u8 rsvd = (anacap & 0x20) >> 5;
+	__u8 ana_change = (anacap & 0x10) >> 4;
+	__u8 ana_persist_loss = (anacap & 0x08) >> 3;
+	__u8 ana_inaccessible = (anacap & 0x04) >> 2;
+	__u8 ana_nonopt = (anacap & 0x02) >> 1;
+	__u8 ana_opt = (anacap & 0x01);
+
+	printf("  [7:7] : %#x\tNon-zero group ID %sSupported\n",
+	       nz, nz ? "" : "Not ");
+	printf("  [6:6] : %#x\tGroup ID does %schange\n",
+	       grpid_change, grpid_change ? "" : "not ");
+	if (rsvd)
+		printf(" [5:5] : %#x\tReserved\n", rsvd);
+	printf("  [4:4] : %#x\tANA Change state %sSupported\n",
+		ana_change, ana_change ? "" : "Not ");
+	printf("  [3:3] : %#x\tANA Persistent Loss state %sSupported\n",
+		ana_persist_loss, ana_persist_loss ? "" : "Not ");
+	printf("  [2:2] : %#x\tANA Inaccessible state %sSupported\n",
+		ana_inaccessible, ana_inaccessible ? "" : "Not ");
+	printf("  [1:1] : %#x\tANA Non-optimized state %sSupported\n",
+		ana_nonopt, ana_nonopt ? "" : "Not ");
+	printf("  [0:0] : %#x\tANA Optimized state %sSupported\n",
+		ana_opt, ana_opt ? "" : "Not ");
 	printf("\n");
 }
 
@@ -600,6 +651,9 @@ void show_nvme_id_ns(struct nvme_id_ns *ns, unsigned int mode)
 	printf("nabspf  : %d\n", le16_to_cpu(ns->nabspf));
 	printf("noiob   : %d\n", le16_to_cpu(ns->noiob));
 	printf("nvmcap  : %.0Lf\n", int128_to_double(ns->nvmcap));
+	printf("nvmsetid: %d\n", le16_to_cpu(ns->nvmsetid));
+	printf("anagrpid: %d\n", le32_to_cpu(ns->anagrpid));
+	printf("endgid  : %d\n", le16_to_cpu(ns->endgid));
 
 	printf("nguid   : ");
 	for (i = 0; i < 16; i++)
@@ -876,6 +930,13 @@ void __show_nvme_id_ctrl(struct nvme_id_ctrl *ctrl, unsigned int mode, void (*ve
 		show_nvme_id_ctrl_sanicap(ctrl->sanicap);
 	printf("hmminds : %d\n", le32_to_cpu(ctrl->hmminds));
 	printf("hmmaxd  : %d\n", le16_to_cpu(ctrl->hmmaxd));
+	printf("nsetidmax : %d\n", le16_to_cpu(ctrl->nsetidmax));
+	printf("anatt   : %d\n", ctrl->anatt);
+	printf("anacap  : %d\n", ctrl->anacap);
+	if (human)
+		show_nvme_id_ctrl_anacap(ctrl->anacap);
+	printf("anagrpmax : %d\n", ctrl->anagrpmax);
+	printf("nanagrpid : %d\n", le32_to_cpu(ctrl->nanagrpid));
 	printf("sqes    : %#x\n", ctrl->sqes);
 	if (human)
 		show_nvme_id_ctrl_sqes(ctrl->sqes);
@@ -903,6 +964,7 @@ void __show_nvme_id_ctrl(struct nvme_id_ctrl *ctrl, unsigned int mode, void (*ve
 		show_nvme_id_ctrl_nvscc(ctrl->nvscc);
 	printf("acwu    : %d\n", le16_to_cpu(ctrl->acwu));
 	printf("sgls    : %x\n", le32_to_cpu(ctrl->sgls));
+	printf("mnan    : %d\n", le32_to_cpu(ctrl->mnan));
 	if (human)
 		show_nvme_id_ctrl_sgls(ctrl->sgls);
 	printf("subnqn  : %-.*s\n", (int)sizeof(ctrl->subnqn), ctrl->subnqn);
@@ -1100,6 +1162,44 @@ void show_smart_log(struct nvme_smart_log *smart, unsigned int nsid, const char 
 	printf("Thermal Management T2 Total Time    : %u\n", le32_to_cpu(smart->thm_temp2_total_time));
 }
 
+void show_ana_log(struct nvme_ana_rsp_hdr *ana_log, const char *devname)
+{
+	int offset = sizeof(struct nvme_ana_rsp_hdr);
+	struct nvme_ana_rsp_hdr *hdr = ana_log;
+	struct nvme_ana_group_desc *desc;
+	size_t nsid_buf_size;
+	void *base = ana_log;
+	__u32 nr_nsids;
+	int i;
+	int j;
+
+	printf("Asynchronous Namespace Access Log for NVMe device: %s\n",
+			devname);
+	printf("ANA LOG HEADER :-\n");
+	printf("chgcnt	:	%"PRIu64"\n",
+			(uint64_t)le64_to_cpu(hdr->chgcnt));
+	printf("ngrps	:	%u\n", le16_to_cpu(hdr->ngrps));
+	printf("ANA Log Desc :-\n");
+
+	for (i = 0; i < le16_to_cpu(ana_log->ngrps); i++) {
+		desc = base + offset;
+		nr_nsids = le32_to_cpu(desc->nnsids);
+		nsid_buf_size = nr_nsids * sizeof(__le32);
+
+		offset += sizeof(*desc);
+		printf("grpid	:	%u\n", le32_to_cpu(desc->grpid));
+		printf("nnsids	:	%u\n", le32_to_cpu(desc->nnsids));
+		printf("chgcnt	:	%llu\n", le64_to_cpu(desc->chgcnt));
+		printf("state	:	%s\n",
+				nvme_ana_state_to_string(desc->state));
+		for (j = 0; j < le32_to_cpu(desc->nnsids); j++)
+			printf("	nsid	:	%u\n",
+					le32_to_cpu(desc->nsids[j]));
+		printf("\n");
+		offset += nsid_buf_size;
+	}
+}
+
 char *nvme_feature_to_string(int feature)
 {
 	switch (feature) {
@@ -1216,6 +1316,10 @@ char *nvme_status_to_string(__u32 status)
 	case NVME_SC_COMPARE_FAILED:		return "COMPARE_FAILED";
 	case NVME_SC_ACCESS_DENIED:		return "ACCESS_DENIED";
 	case NVME_SC_UNWRITTEN_BLOCK:		return "UNWRITTEN_BLOCK";
+
+	case NVME_SC_ANA_PERSISTENT_LOSS:	return "ANA_PERSISTENT_LOSS";
+	case NVME_SC_ANA_INACCESSIBLE:		return "ANA_INACCESSIBLE";
+	case NVME_SC_ANA_TRANSITION:		return "ANA_TRANSITION";
 	default:				return "Unknown";
 	}
 }
@@ -1566,6 +1670,9 @@ void json_nvme_id_ns(struct nvme_id_ns *ns, unsigned int mode)
 	json_object_add_value_int(root, "nabspf", le16_to_cpu(ns->nabspf));
 	json_object_add_value_int(root, "noiob", le16_to_cpu(ns->noiob));
 	json_object_add_value_float(root, "nvmcap", nvmcap);
+	json_object_add_value_int(root, "nvmsetid", le16_to_cpu(ns->nvmsetid));
+	json_object_add_value_int(root, "anagrpid", le32_to_cpu(ns->anagrpid));
+	json_object_add_value_int(root, "endgid", le16_to_cpu(ns->endgid));
 
 	memset(eui64, 0, sizeof(eui64_buf));
 	for (i = 0; i < sizeof(ns->eui64); i++)
@@ -1657,6 +1764,13 @@ void json_nvme_id_ctrl(struct nvme_id_ctrl *ctrl, unsigned int mode, void (*vs)(
 	json_object_add_value_int(root, "mntmt", le16_to_cpu(ctrl->mntmt));
 	json_object_add_value_int(root, "mxtmt", le16_to_cpu(ctrl->mxtmt));
 	json_object_add_value_int(root, "sanicap", le32_to_cpu(ctrl->sanicap));
+	json_object_add_value_int(root, "hmminds", le32_to_cpu(ctrl->hmminds));
+	json_object_add_value_int(root, "hmmaxd", le16_to_cpu(ctrl->hmmaxd));
+	json_object_add_value_int(root, "nsetidmax", le16_to_cpu(ctrl->nsetidmax));
+	json_object_add_value_int(root, "anatt",ctrl->anatt);
+	json_object_add_value_int(root, "anacap", ctrl->anacap);
+	json_object_add_value_int(root, "anagrpmax", le32_to_cpu(ctrl->anagrpmax));
+	json_object_add_value_int(root, "nanagrpid", le32_to_cpu(ctrl->nanagrpid));
 	json_object_add_value_int(root, "sqes", ctrl->sqes);
 	json_object_add_value_int(root, "cqes", ctrl->cqes);
 	json_object_add_value_int(root, "maxcmd", le16_to_cpu(ctrl->maxcmd));
@@ -1896,6 +2010,65 @@ void json_smart_log(struct nvme_smart_log *smart, unsigned int nsid, const char 
 	json_object_add_value_int(root, "thm_temp2_total_time",
 			le32_to_cpu(smart->thm_temp2_total_time));
 
+	json_print_object(root, NULL);
+	printf("\n");
+	json_free_object(root);
+}
+
+void json_ana_log(struct nvme_ana_rsp_hdr *ana_log, const char *devname)
+{
+	int offset = sizeof(struct nvme_ana_rsp_hdr);
+	struct nvme_ana_rsp_hdr *hdr = ana_log;
+	struct nvme_ana_group_desc *ana_desc;
+	struct json_array *desc_list;
+	struct json_array *ns_list;
+	struct json_object *desc;
+	struct json_object *nsid;
+	struct json_object *root;
+	size_t nsid_buf_size;
+	void *base = ana_log;
+	__u32 nr_nsids;
+	int i;
+	int j;
+
+	root = json_create_object();
+	json_object_add_value_string(root,
+			"Asynchronous Namespace Access Log for NVMe device:",
+			devname);
+	json_object_add_value_uint(root, "chgcnt",
+			(uint64_t)le64_to_cpu(hdr->chgcnt));
+	json_object_add_value_uint(root, "ngrps", le16_to_cpu(hdr->ngrps));
+
+	desc_list = json_create_array();
+	for (i = 0; i < le16_to_cpu(ana_log->ngrps); i++) {
+		desc = json_create_object();
+		ana_desc = base + offset;
+		nr_nsids = le32_to_cpu(ana_desc->nnsids);
+		nsid_buf_size = nr_nsids * sizeof(__le32);
+
+		offset += sizeof(*ana_desc);
+		json_object_add_value_uint(desc, "grpid",
+				le32_to_cpu(ana_desc->grpid));
+		json_object_add_value_uint(desc, "nnsids",
+				le32_to_cpu(ana_desc->nnsids));
+		json_object_add_value_uint(desc, "chgcnt",
+				le64_to_cpu(ana_desc->chgcnt));
+		json_object_add_value_string(desc, "state",
+				nvme_ana_state_to_string(ana_desc->state));
+
+		ns_list = json_create_array();
+		for (j = 0; j < le32_to_cpu(ana_desc->nnsids); j++) {
+			nsid = json_create_object();
+			json_object_add_value_uint(nsid, "nsid",
+					le32_to_cpu(ana_desc->nsids[j]));
+			json_array_add_value_object(ns_list, nsid);
+		}
+		json_object_add_value_array(desc, "NSIDS", ns_list);
+		offset += nsid_buf_size;
+		json_array_add_value_object(desc_list, desc);
+	}
+
+	json_object_add_value_array(root, "ANA DESC LIST ", desc_list);
 	json_print_object(root, NULL);
 	printf("\n");
 	json_free_object(root);

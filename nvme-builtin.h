@@ -22,6 +22,7 @@ COMMAND_LIST(
 	ENTRY("get-log", "Generic NVMe get log, returns log in raw format", get_log)
 	ENTRY("fw-log", "Retrieve FW Log, show it", get_fw_log)
 	ENTRY("smart-log", "Retrieve SMART Log, show it", get_smart_log)
+	ENTRY("ana-log", "Retrieve ANA Log, show it", get_ana_log)
 	ENTRY("error-log", "Retrieve Error Log, show it", get_error_log)
 	ENTRY("effects-log", "Retrieve Command Effects Log, show it", get_effects_log)
 	ENTRY("get-feature", "Get feature and show the resulting value", get_feature)
