@@ -394,7 +394,8 @@ int nvme_get_log13(int fd, __u32 nsid, __u8 log_id, __u8 lsp, __u64 lpo,
 
 }
 
-int nvme_get_log(int fd, __u32 nsid, __u8 log_id, __u32 data_len, void *data)
+int nvme_get_log(int fd, __u32 nsid, __u8 log_id, bool rae,
+		 __u32 data_len, void *data)
 {
 	void *ptr = data;
 	__u32 offset = 0, xfer_len = data_len;
@@ -411,7 +412,7 @@ int nvme_get_log(int fd, __u32 nsid, __u8 log_id, __u32 data_len, void *data)
 			xfer_len = 4096;
 
 		ret = nvme_get_log13(fd, nsid, log_id, NVME_NO_LOG_LSP,
-				     offset, 0, false, xfer_len, ptr);
+				     offset, 0, rae, xfer_len, ptr);
 		if (ret)
 			return ret;
 
@@ -424,22 +425,25 @@ int nvme_get_log(int fd, __u32 nsid, __u8 log_id, __u32 data_len, void *data)
 
 int nvme_fw_log(int fd, struct nvme_firmware_log_page *fw_log)
 {
-	return nvme_get_log(fd, NVME_NSID_ALL, NVME_LOG_FW_SLOT, sizeof(*fw_log), fw_log);
+	return nvme_get_log(fd, NVME_NSID_ALL, NVME_LOG_FW_SLOT, true,
+			sizeof(*fw_log), fw_log);
 }
 
 int nvme_error_log(int fd, int entries, struct nvme_error_log_page *err_log)
 {
-	return nvme_get_log(fd, NVME_NSID_ALL, NVME_LOG_ERROR, entries * sizeof(*err_log), err_log);
+	return nvme_get_log(fd, NVME_NSID_ALL, NVME_LOG_ERROR, false,
+			entries * sizeof(*err_log), err_log);
 }
 
 int nvme_smart_log(int fd, __u32 nsid, struct nvme_smart_log *smart_log)
 {
-	return nvme_get_log(fd, nsid, NVME_LOG_SMART, sizeof(*smart_log), smart_log);
+	return nvme_get_log(fd, nsid, NVME_LOG_SMART, false,
+			sizeof(*smart_log), smart_log);
 }
 
 int nvme_discovery_log(int fd, struct nvmf_disc_rsp_page_hdr *log, __u32 size)
 {
-	return nvme_get_log(fd, 0, NVME_LOG_DISC, size, log);
+	return nvme_get_log(fd, 0, NVME_LOG_DISC, true, size, log);
 }
 
 int nvme_feature(int fd, __u8 opcode, __u32 nsid, __u32 cdw10, __u32 cdw11,
