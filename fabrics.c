@@ -552,7 +552,7 @@ add_argument(char **argstr, int *max_len, char *arg_str, char *arg)
 	return 0;
 }
 
-static int build_options(char *argstr, int max_len)
+static int build_options(char *argstr, int max_len, bool discover)
 {
 	int len;
 
@@ -583,11 +583,15 @@ static int build_options(char *argstr, int max_len)
 		    add_argument(&argstr, &max_len, "hostnqn", cfg.hostnqn)) ||
 	    ((cfg.hostid || nvmf_hostid_file()) &&
 		    add_argument(&argstr, &max_len, "hostid", cfg.hostid)) ||
-	    add_int_argument(&argstr, &max_len, "nr_io_queues",
-				cfg.nr_io_queues) ||
-	    add_int_argument(&argstr, &max_len, "queue_size", cfg.queue_size) ||
-	    add_int_argument(&argstr, &max_len, "keep_alive_tmo",
-				cfg.keep_alive_tmo) ||
+	    (!discover &&
+	     add_int_argument(&argstr, &max_len, "nr_io_queues",
+				cfg.nr_io_queues)) ||
+	    (!discover &&
+	     add_int_argument(&argstr, &max_len, "queue_size",
+				cfg.queue_size)) ||
+	    (!discover &&
+	     add_int_argument(&argstr, &max_len, "keep_alive_tmo",
+				cfg.keep_alive_tmo)) ||
 	    add_int_argument(&argstr, &max_len, "reconnect_delay",
 				cfg.reconnect_delay) ||
 	    add_int_argument(&argstr, &max_len, "ctrl_loss_tmo",
@@ -835,7 +839,7 @@ static int discover_from_conf_file(const char *desc, char *argstr,
 
 		argconfig_parse(argc, argv, desc, opts, &cfg, sizeof(cfg));
 
-		err = build_options(argstr, BUF_SIZE);
+		err = build_options(argstr, BUF_SIZE, true);
 		if (err) {
 			ret = err;
 			continue;
@@ -885,7 +889,7 @@ int discover(const char *desc, int argc, char **argv, bool connect)
 		return discover_from_conf_file(desc, argstr,
 				command_line_options, connect);
 	} else {
-		ret = build_options(argstr, BUF_SIZE);
+		ret = build_options(argstr, BUF_SIZE, true);
 		if (ret)
 			return ret;
 
@@ -917,7 +921,7 @@ int connect(const char *desc, int argc, char **argv)
 	argconfig_parse(argc, argv, desc, command_line_options, &cfg,
 			sizeof(cfg));
 
-	ret = build_options(argstr, BUF_SIZE);
+	ret = build_options(argstr, BUF_SIZE, false);
 	if (ret)
 		return ret;
 
