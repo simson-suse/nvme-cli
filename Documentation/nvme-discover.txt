@@ -15,6 +15,9 @@ SYNOPSIS
 		[--host-traddr=<traddr>   | -w <traddr>]
 		[--hostnqn=<hostnqn>      | -q <hostnqn>]
 		[--raw=<filename>	  | -r <filename>]
+		[--nr-io-queues=<#>       | -i <#>]
+		[--queue-size=<#>         | -Q <#>]
+		[--keep-alive-tmo=<#>     | -k <#>]
 		[--reconnect-delay=<#>	  | -c <#>]
 		[--ctrl-loss-tmo=<#>	  | -l <#>]
 
@@ -100,6 +103,25 @@ OPTIONS
 	This field will take the output of the 'nvme discover' command
 	and dump it to a raw binary file. By default 'nvme discover' will
 	dump the output to stdout.
+
+-i <#>::
+--nr-io-queues=<#>::
+	Overrides the default number of I/O queues create by the driver.
+	This option will be ignored for the discovery, and it only implemented
+	for completeness.
+
+-Q <#>::
+--queue-size=<#>::
+	Overrides the default number of elements in the I/O queues created
+	by the driver.
+	This option will be ignored for the discovery, and it only implemented
+	for completeness.
+
+-k <#>::
+--keep-alive-tmo=<#>::
+	Overrides the default keep alive timeout (in seconds).
+	This option will be ignored for the discovery, and it only implemented
+	for completeness.
 
 -c <#>::
 --reconnect-delay=<#>::

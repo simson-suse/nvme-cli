@@ -14,9 +14,11 @@ SYNOPSIS
 		[--trsvcid=<trsvcid>      | -s <trsvcid>]
 		[--host-traddr=<traddr>   | -w <traddr>]
 		[--hostnqn=<hostnqn>      | -q <hostnqn>]
+		[--raw=<filename>	  | -r <filename>]
+		[--nr-io-queues=<#>       | -i <#>]
+		[--queue-size=<#>         | -Q <#>]
 		[--keep-alive-tmo=<#>     | -k <#>]
 		[--ctrl-loss-tmo=<#>	  | -l <#>]
-		[--raw=<filename>         | -r <filename>]
 
 DESCRIPTION
 -----------
@@ -83,10 +85,17 @@ OPTIONS
 	and dump it to a raw binary file. By default 'nvme connect-all' will
 	dump the output to stdout.
 
+-i <#>::
+--nr-io-queues=<#>::
+	Overrides the default number of I/O queues create by the driver.
+	This option will be ignored for discovery, but will be passed on
+	to the subsequent connect call.
+
 -Q <#>::
 --queue-size=<#>::
 	Overrides the default number of elements in the I/O queues created
-	by the driver.
+	by the driver. This option will be ignored for discovery, but will be
+	passed on to the subsequent connect call.
 
 -k <#>::
 --keep-alive-tmo=<#>::
