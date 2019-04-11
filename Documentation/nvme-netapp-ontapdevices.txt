@@ -1,5 +1,5 @@
 nvme-netapp-ontapdevices(1)
-========================
+===========================
 
 NAME
 ----
@@ -13,7 +13,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 Display information about ONTAP devices on the host. The ONTAP devices are
-are identified using the Identify Controller data.
+identified using the Identify Controller data.
 
 OPTIONS
 -------
